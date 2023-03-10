@@ -32,77 +32,60 @@ public:
 
     SingleLinkedList(std::initializer_list<Type> values) {
     if (values.size() == 0) {return;}
-        auto it = values.end();
         SingleLinkedList tmp;
         try{
-        while (it != values.begin()){
-            --it;
-            tmp.PushFront(*it);
-
-        }
-                swap(tmp);
-        // Реализуйте конструктор самостоятельно
-    } catch(const std::bad_alloc&){
-            tmp.Clear();
+            auto it = values.end();
+            while (it != values.begin()){
+                tmp.PushFront(*(--it));
+            }
+/*      //   компилятор не находит rbegin, rend согласен что такой вариант был бы академичней
+            for (Iterator it = values.rbegin(); it != values.rend(); it++){
+                tmp.PushFront(*it);
+            }
+*/
+        swap(tmp);
+   // Реализуйте конструктор самостоятельно
+        } catch(const std::bad_alloc&){
         throw "kon copy problem";
         }
-        // Реализуйте конструктор самостоятельно
-
    }
 
 
     SingleLinkedList(const SingleLinkedList& other) {
-        if (other.IsEmpty()){
-            return ;}
+       if (other.IsEmpty()){
+            return ;
+       }
+       if (head_.next_node != other.head_.next_node) {
+            SingleLinkedList tmp;
 
-        SingleLinkedList tmp;
-               tmp = other;
+            try{              
+                ConstIterator It = other.cbegin();
+                Iterator last_elemnt_adress = tmp.before_begin();
+                while(It != other.end()){
+                    last_elemnt_adress.node_->next_node = new Node(It.node_->value, nullptr);                    
+                    ++size_;
+                    ++It;
+                    last_elemnt_adress.node_ = last_elemnt_adress.node_->next_node;
+
+                }
                 swap(tmp);
 
-        // Реализуйте конструктор самостоятельно
+             } catch(const std::bad_alloc&) {
+                  throw;
+               }
+       }
     }
 
     SingleLinkedList& operator=(const SingleLinkedList& rhs) {
-       // assert(size_ == 0 && head_.next_node == nullptr);
-        if (head_.next_node != rhs.head_.next_node) {
-            SingleLinkedList tmp;
-            SingleLinkedList tmp2;
-
-       try{
-            for (auto it = rhs.begin(); it != rhs.end(); ++it){
-                tmp2.PushFront(*it);
-
-            }
-
-            for (auto it = tmp2.begin(); it != tmp2.end(); ++it){
-                tmp.PushFront(*it);
-
-            }
-
-                swap(tmp);
-            } catch(const std::bad_alloc&) {
-                tmp.Clear();
-                tmp2.Clear();
-                throw;
-            }
-
-
-        }
-
-        // Реализуйте присваивание самостоятельно
+        SingleLinkedList tmp(rhs);
+        swap(tmp);
         return *this;
     }
 
     // Обменивает содержимое списков за время O(1)
     void swap(SingleLinkedList& other) noexcept {
-        auto nn = head_.next_node;
-        //Node head2 = other.head_;
-        size_t size1 = size_;
-        head_.next_node=other.head_.next_node;
-        other.head_.next_node = nn;
-        size_ = other.size_;
-        other.size_ = size1;
-        // Реализуйте обмен содержимого списков самостоятельно
+        std::swap(head_.next_node, other.head_.next_node);
+        std::swap(size_, other.size_);
     }
 
 
@@ -115,7 +98,6 @@ public:
     // Сообщает, пустой ли список за время O(1)
     [[nodiscard]] bool IsEmpty() const noexcept {
         if (size_==0){return true;}
-        // Заглушка. Реализуйте метод самостоятельно
         return false;
     }
 
@@ -123,19 +105,14 @@ public:
     void PushFront(const Type& value) {
         head_.next_node = new Node(value, head_.next_node);
         ++size_;
-        // Реализуйте метод самостоятельно
     }
 
     // Очищает список за время O(N)
     void Clear() noexcept {
-
         while (head_.next_node != nullptr){
-        Node* first = head_.next_node;
-        head_.next_node = head_.next_node->next_node;
-        delete first;
+            PopFront();
         }
         size_ = 0;
-        // Реализуйте метод самостоятельно
     }
 
     // Шаблон класса «Базовый Итератор».
@@ -149,8 +126,6 @@ public:
 
         // Конвертирующий конструктор итератора из указателя на узел списка
         explicit BasicIterator(Node* node): node_(node) {
-        //    assert(false);
-            // Реализуйте конструктор самостоятельно
         }
 
     public:
@@ -174,9 +149,7 @@ public:
         // При ValueType, совпадающем с Type, играет роль копирующего конструктора
         // При ValueType, совпадающем с const Type, играет роль конвертирующего конструктора
         BasicIterator(const BasicIterator<Type>& other) noexcept {
-            //assert(false);
             node_ = other.node_;
-            // Реализуйте конструктор самостоятельно
         }
 
 
@@ -187,28 +160,25 @@ public:
 
         // Оператор сравнения итераторов (в роли второго аргумента выступает константный итератор)
         // Два итератора равны, если они ссылаются на один и тот же элемент списка либо на end()
-        [[nodiscard]] bool operator==(const BasicIterator<const Type>& rhs) const noexcept {
-            //assert(false);
+        template<typename T>
+        [[nodiscard]] bool operator==(const BasicIterator<T>& rhs) const noexcept {
             return node_ == rhs.node_;
-            // Заглушка. Реализуйте оператор самостоятельно
         }
 
         // Оператор проверки итераторов на неравенство
         // Противоположен !=
-        [[nodiscard]] bool operator!=(const BasicIterator<const Type>& rhs) const noexcept {
-            //assert(false);
+        template<typename T>
+        [[nodiscard]] bool operator!=(const BasicIterator<T>& rhs) const noexcept {
             return rhs.node_ != node_;
-            // Заглушка. Реализуйте оператор самостоятельно
         }
 
         // Оператор прединкремента. После его вызова итератор указывает на следующий элемент списка
         // Возвращает ссылку на самого себя
         // Инкремент итератора, не указывающего на существующий элемент списка, приводит к неопределённому поведению
         BasicIterator& operator++() noexcept {
-            //assert(false);
+            assert(node_->next_node != nullptr);
             node_ = node_->next_node;
             return *this;
-            // Заглушка. Реализуйте оператор самостоятельно
         }
 
         // Оператор постинкремента. После его вызова итератор указывает на следующий элемент списка
@@ -216,20 +186,17 @@ public:
         // Инкремент итератора, не указывающего на существующий элемент списка,
         // приводит к неопределённому поведению
         BasicIterator operator++(int) noexcept {
-            //assert(false);
+            assert(node_->next_node != nullptr);
             BasicIterator old_node(*this);
             node_ = node_->next_node;
             return old_node;
-            // Заглушка. Реализуйте оператор самостоятельно
         }
 
         // Операция разыменования. Возвращает ссылку на текущий элемент
         // Вызов этого оператора у итератора, не указывающего на существующий элемент списка,
         // приводит к неопределённому поведению
         [[nodiscard]] reference operator*() const noexcept {
-            //assert(false);
-            // Не реализовано
-            // Заглушка. Реализуйте оператор самостоятельно
+            assert(node_->next_node != nullptr);
             return node_->value;
         }
 
@@ -237,10 +204,8 @@ public:
         // Вызов этого оператора у итератора, не указывающего на существующий элемент списка,
         // приводит к неопределённому поведению
         [[nodiscard]] pointer operator->() const noexcept {
-            //assert(false);
+            assert(node_->next_node != nullptr);
             return &node_->value;
-            // Заглушка. Реализуйте оператор самостоятельно
-
         }
 
 
@@ -263,26 +228,18 @@ public:
     // Если список пустой, возвращённый итератор будет равен end()
     [[nodiscard]] Iterator begin() noexcept {
         return Iterator(head_.next_node);
-        //assert(false);
-        // Реализуйте самостоятельно
-
     }
 
     // Возвращает итератор, указывающий на позицию, следующую за последним элементом односвязного списка
     // Разыменовывать этот итератор нельзя — попытка разыменования приведёт к неопределённому поведению
     [[nodiscard]] Iterator end() noexcept {
         return {Iterator(nullptr)};
-        //assert(false);
-        // Реализуйте самостоятельно
-
     }
 
     // Возвращает константный итератор, ссылающийся на первый элемент
     // Если список пустой, возвращённый итератор будет равен end()
     // Результат вызова эквивалентен вызову метода cbegin()
     [[nodiscard]] ConstIterator begin() const noexcept {
-        //assert(false);
-        // Реализуйте самостоятельно
         return {ConstIterator(head_.next_node)};
     }
 
@@ -290,24 +247,18 @@ public:
     // Разыменовывать этот итератор нельзя — попытка разыменования приведёт к неопределённому поведению
     // Результат вызова эквивалентен вызову метода cend()
     [[nodiscard]] ConstIterator end() const noexcept {
-        //assert(false);
-        // Реализуйте самостоятельно
         return {ConstIterator(nullptr)};
     }
 
     // Возвращает константный итератор, ссылающийся на первый элемент
     // Если список пустой, возвращённый итератор будет равен cend()
     [[nodiscard]] ConstIterator cbegin() const noexcept {
-        //assert(false);
-        // Реализуйте самостоятельно
         return {ConstIterator(head_.next_node)};
     }
 
     // Возвращает константный итератор, указывающий на позицию, следующую за последним элементом односвязного списка
     // Разыменовывать этот итератор нельзя — попытка разыменования приведёт к неопределённому поведению
     [[nodiscard]] ConstIterator cend() const noexcept {
-        //assert(false);
-        // Реализуйте самостоятельно
         return {ConstIterator(nullptr)};
     }
 
@@ -317,15 +268,12 @@ public:
         // Возвращает итератор, указывающий на позицию перед первым элементом односвязного списка.
         // Разыменовывать этот итератор нельзя - попытка разыменования приведёт к неопределённому поведению
         [[nodiscard]] Iterator before_begin() noexcept {
-            // Реализуйте самостоятельно
             return {Iterator(&head_)};
         }
 
         // Возвращает константный итератор, указывающий на позицию перед первым элементом односвязного списка.
         // Разыменовывать этот итератор нельзя - попытка разыменования приведёт к неопределённому поведению
         [[nodiscard]] ConstIterator cbefore_begin() const noexcept {
-            // Реализуйте самостоятельно
-
             return {ConstIterator{const_cast<Node *>(&head_)}};
         }
 
@@ -349,11 +297,16 @@ public:
         }
 
         void PopFront() noexcept {
-           Node* a = head_.next_node;
-           head_.next_node = a->next_node;
-           delete a;
-           size_--;
-            // Реализуйте метод самостоятельно
+           if(head_.next_node != nullptr){
+               //Node* first_node = head_.next_node;
+               Node* first_node;
+               std::exchange(first_node, head_.next_node);
+               assert(first_node !=nullptr);
+               assert(first_node->next_node !=nullptr);
+               head_.next_node = first_node->next_node;
+               delete first_node;
+               size_--;
+           }
         }
 
         /*
@@ -364,13 +317,8 @@ public:
             Node *Enode = pos.node_->next_node;
             pos.node_->next_node = Enode->next_node;
             delete Enode;
-            // Заглушка. Реализуйте метод самостоятельно
             return {Iterator(pos.node_->next_node)};
         }
-
-    //--------------------------------------------------------------
-
-
 
 private:
     // Фиктивный узел, используется для вставки "перед первым элементом"
@@ -379,46 +327,35 @@ private:
 
 };
 
-//----------------------------------------------------
 
 template <typename Type>
 void swap(SingleLinkedList<Type>& lhs, SingleLinkedList<Type>& rhs) noexcept {
-    // Реализуйте обмен самостоятельно
     lhs.swap(rhs);
 }
 
 template <typename Type>
 bool operator==(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    // Заглушка. Реализуйте сравнение самостоятельно
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin());
+    if((lhs.GetSize() != rhs.GetSize())) {return false;}
+    return  std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
 }
 
 template <typename Type>
 bool operator!=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    // Заглушка. Реализуйте сравнение самостоятельно
-    return !std::equal(lhs.begin(), lhs.end(), rhs.begin());
+    return !(lhs == rhs);
 }
 
 template <typename Type>
 bool operator<(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    bool e = std::equal(lhs.begin(), lhs.end(), rhs.begin());
-   // if (e) {return false;}
-    e = std::lexicographical_compare(lhs.begin(), lhs.end(),rhs.begin(), rhs.end());
-    // Заглушка. Реализуйте сравнение самостоятельно
-    return e;
-}
-
-template <typename Type>
-bool operator<=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    // Заглушка. Реализуйте сравнение самостоятельно
-    bool e = std::equal(lhs.begin(), lhs.end(), rhs.begin());
-    if (e) {return true;}
     return std::lexicographical_compare(lhs.begin(), lhs.end(),rhs.begin(), rhs.end());
 }
 
 template <typename Type>
+bool operator<=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
+    return (lhs == rhs) || !(lhs >= rhs);
+}
+
+template <typename Type>
 bool operator>(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    // Заглушка. Реализуйте сравнение самостоятельно
     bool e = std::equal(lhs.begin(), lhs.end(), rhs.begin());
     if (e) {return false;}
     return !std::lexicographical_compare(lhs.begin(), lhs.end(),rhs.begin(), rhs.end());
@@ -426,7 +363,6 @@ bool operator>(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& 
 
 template <typename Type>
 bool operator>=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    // Заглушка. Реализуйте сравнение самостоятельно
     bool e = std::equal(lhs.begin(), lhs.end(), rhs.begin());
     if (e) {return true;}
     return !std::lexicographical_compare(lhs.begin(), lhs.end(),rhs.begin(), rhs.end());
