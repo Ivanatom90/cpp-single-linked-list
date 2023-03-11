@@ -34,15 +34,10 @@ public:
     if (values.size() == 0) {return;}
         SingleLinkedList tmp;
         try{
-            auto it = values.end();
-            while (it != values.begin()){
-                tmp.PushFront(*(--it));
-            }
-/*      //   компилятор не находит rbegin, rend согласен что такой вариант был бы академичней
-            for (Iterator it = values.rbegin(); it != values.rend(); it++){
+            for (auto it = std::rbegin(values); it != std::rend(values); it++){
                 tmp.PushFront(*it);
             }
-*/
+
         swap(tmp);
    // Реализуйте конструктор самостоятельно
         } catch(const std::bad_alloc&){
@@ -55,25 +50,13 @@ public:
        if (other.IsEmpty()){
             return ;
        }
-       if (head_.next_node != other.head_.next_node) {
-            SingleLinkedList tmp;
-
-            try{              
+            SingleLinkedList tmp;            
                 ConstIterator It = other.cbegin();
                 Iterator last_elemnt_adress = tmp.before_begin();
                 while(It != other.end()){
-                    last_elemnt_adress.node_->next_node = new Node(It.node_->value, nullptr);                    
-                    ++size_;
-                    ++It;
-                    last_elemnt_adress.node_ = last_elemnt_adress.node_->next_node;
-
+                    InsertAfter(last_elemnt_adress++, (It++).node_->value);
                 }
                 swap(tmp);
-
-             } catch(const std::bad_alloc&) {
-                  throw;
-               }
-       }
     }
 
     SingleLinkedList& operator=(const SingleLinkedList& rhs) {
@@ -112,7 +95,6 @@ public:
         while (head_.next_node != nullptr){
             PopFront();
         }
-        size_ = 0;
     }
 
     // Шаблон класса «Базовый Итератор».
@@ -126,6 +108,7 @@ public:
 
         // Конвертирующий конструктор итератора из указателя на узел списка
         explicit BasicIterator(Node* node): node_(node) {
+            // Реализуйте конструктор самостоятельно
         }
 
     public:
@@ -149,6 +132,7 @@ public:
         // При ValueType, совпадающем с Type, играет роль копирующего конструктора
         // При ValueType, совпадающем с const Type, играет роль конвертирующего конструктора
         BasicIterator(const BasicIterator<Type>& other) noexcept {
+            //assert(false);
             node_ = other.node_;
         }
 
@@ -176,7 +160,7 @@ public:
         // Возвращает ссылку на самого себя
         // Инкремент итератора, не указывающего на существующий элемент списка, приводит к неопределённому поведению
         BasicIterator& operator++() noexcept {
-            assert(node_->next_node != nullptr);
+            assert(node_ != nullptr);
             node_ = node_->next_node;
             return *this;
         }
@@ -186,9 +170,9 @@ public:
         // Инкремент итератора, не указывающего на существующий элемент списка,
         // приводит к неопределённому поведению
         BasicIterator operator++(int) noexcept {
-            assert(node_->next_node != nullptr);
-            BasicIterator old_node(*this);
-            node_ = node_->next_node;
+            assert(node_ != nullptr);
+            BasicIterator old_node(node_);
+            ++node_;
             return old_node;
         }
 
@@ -196,7 +180,7 @@ public:
         // Вызов этого оператора у итератора, не указывающего на существующий элемент списка,
         // приводит к неопределённому поведению
         [[nodiscard]] reference operator*() const noexcept {
-            assert(node_->next_node != nullptr);
+            assert(node_ != nullptr);
             return node_->value;
         }
 
@@ -204,11 +188,9 @@ public:
         // Вызов этого оператора у итератора, не указывающего на существующий элемент списка,
         // приводит к неопределённому поведению
         [[nodiscard]] pointer operator->() const noexcept {
-            assert(node_->next_node != nullptr);
+            assert(node_ != nullptr);
             return &node_->value;
         }
-
-
 
     private:
         Node* node_ = nullptr;
@@ -297,16 +279,15 @@ public:
         }
 
         void PopFront() noexcept {
-           if(head_.next_node != nullptr){
+           assert(!IsEmpty());
                //Node* first_node = head_.next_node;
-               Node* first_node;
-               std::exchange(first_node, head_.next_node);
+               Node* first_node = nullptr;
+               delete std::exchange( first_node, head_.next_node);
                assert(first_node !=nullptr);
-               assert(first_node->next_node !=nullptr);
                head_.next_node = first_node->next_node;
                delete first_node;
                size_--;
-           }
+
         }
 
         /*
@@ -314,11 +295,16 @@ public:
          * Возвращает итератор на элемент, следующий за удалённым
          */
         Iterator EraseAfter(ConstIterator pos) noexcept {
+            assert(pos.node_ && pos.node_->next_node);
             Node *Enode = pos.node_->next_node;
             pos.node_->next_node = Enode->next_node;
             delete Enode;
             return {Iterator(pos.node_->next_node)};
         }
+
+    //--------------------------------------------------------------
+
+
 
 private:
     // Фиктивный узел, используется для вставки "перед первым элементом"
@@ -351,19 +337,15 @@ bool operator<(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& 
 
 template <typename Type>
 bool operator<=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    return (lhs == rhs) || !(lhs >= rhs);
+    return (lhs == rhs) || (lhs < rhs);
 }
 
 template <typename Type>
 bool operator>(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    bool e = std::equal(lhs.begin(), lhs.end(), rhs.begin());
-    if (e) {return false;}
-    return !std::lexicographical_compare(lhs.begin(), lhs.end(),rhs.begin(), rhs.end());
+    return !(lhs<rhs);
 }
 
 template <typename Type>
 bool operator>=(const SingleLinkedList<Type>& lhs, const SingleLinkedList<Type>& rhs) {
-    bool e = std::equal(lhs.begin(), lhs.end(), rhs.begin());
-    if (e) {return true;}
-    return !std::lexicographical_compare(lhs.begin(), lhs.end(),rhs.begin(), rhs.end());
+    return !(lhs<=rhs);
 }
